@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Campus Lost &amp; Found</title>
+
+  <!-- CSRF protection for reporting items -->
+  <meta name="_csrf" th:content="${_csrf.token}">
+  <meta name="_csrf_header" th:content="${_csrf.headerName}">
+
+  <style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 24px;
+        background: #f1f5f9;
+        color: #1e293b;
+    }
+
+    h1 {
+        color: green;
+    }
+
+    .user-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        background: #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 25px;
+    }
+
+    .logout-button {
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    .logout-button:hover {
+        background: #b91c1c;
+    }
+
+    .container {
+        max-width: 700px;
+        margin: auto;
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+
+    input {
+        padding: 10px;
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+    }
+
+    .report-button {
+        background: #2563eb;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    .report-button:hover {
+        background: #1d4ed8;
+    }
+
+    #items {
+        padding-left: 20px;
+    }
+
+    #items li {
+        margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- Signed-in user information -->
+  <div class="user-bar">
+        <span>
+            Signed in as
+            <strong th:text="${username}">Username</strong>
+        </span>
+
+    <form th:action="@{/logout}" method="post">
+      <button type="submit" class="logout-button">
+        Sign out
+      </button>
+    </form>
+  </div>
+
+  <h1>Campus Lost &amp; Found</h1>
+
+  <h2>Reported Items</h2>
+
+  <!-- Items come from /api/items -->
+  <ul id="items"></ul>
+
+  <h2>Found something?</h2>
+
+  <form id="reportForm">
+    <p>
+      <input
+              id="title"
+              placeholder="What is it?"
+              required>
+    </p>
+
+    <p>
+      <input
+              id="location"
+              placeholder="Where did you find it?"
+              required>
+    </p>
+
+    <button type="submit" class="report-button">
+      Report item
+    </button>
+  </form>
+
+</div>
+
+<script>
+  // Load reported items
+  async function loadItems() {
+      const items = await fetch("/api/items")
+          .then(r => r.json());
+
+      const list = document.getElementById("items");
+      list.innerHTML = "";
+
+      for (const item of items) {
+          const li = document.createElement("li");
+          li.textContent = item.title + " – " + item.location;
+          list.appendChild(li);
+      }
+  }
+
+  // Report a new item with CSRF protection
+  document.getElementById("reportForm")
+      .addEventListener("submit", async event => {
+
+      event.preventDefault();
+
+      const item = {
+          title: document.getElementById("title").value,
+          location: document.getElementById("location").value
+      };
+
+      // Get CSRF token and header
+      const csrfToken = document.querySelector(
+          'meta[name="_csrf"]'
+      ).content;
+
+      const csrfHeader = document.querySelector(
+          'meta[name="_csrf_header"]'
+      ).content;
+
+      const response = await fetch("/api/items", {
+          method: "POST",
+          headers: {
+              "Content-Type": "application/json",
+              [csrfHeader]: csrfToken
+          },
+          body: JSON.stringify(item)
+      });
+
+      if (response.ok) {
+          event.target.reset();
+          await loadItems();
+      } else {
+          alert("Unable to report item. Please try again.");
+      }
+  });
+
+  // Load items when page opens
+  loadItems();
+</script>
+
+</body>
+</html>
